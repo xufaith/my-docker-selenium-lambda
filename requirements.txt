@@ -1,0 +1,9 @@
+selenium==4.28.1
+requests==2.32.3
+beautifulsoup4==4.12.3
+pandas==2.2.3
+supabase==2.13.0
+time-python==0.0.17
+Flask==3.0.3
+gunicorn==23.0.0
+Werkzeug==3.0.3
