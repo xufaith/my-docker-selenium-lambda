@@ -122,7 +122,7 @@ def handler(event=None, context=None):
     df.rename(columns={'$': 'cost', 'Cs/Pallet': 'cs_per_pallet', 'Item #': 'item_num', 'Pkg. Info': 'pkg_info'}, inplace=True)
 
     # Remove unwanted categories
-    unwanted_categories = ['Dairy Products', 'Hsehold Cleanng', 'Infant', 'PaperProd', 'Beverages','Bread Products']
+    unwanted_categories = ['Dairy Products', 'Hsehold Cleanng', 'Infant', 'PaperProd', 'Beverages','Bread Products','Snacks']
     df = df[~df['Product Category'].isin(unwanted_categories)]
 
     # Strip leading/trailing spaces if present
@@ -162,11 +162,28 @@ def handler(event=None, context=None):
     # Compare the new data with the old data (check for rows not in the old data)
     merged_df = pd.merge(df, old_df, how='left', on=['item_num'], indicator=True)
     newitems_df = merged_df[merged_df['_merge'] == 'left_only'].drop(columns='_merge')
+    newitems_df = newitems_df[~newitems_df['Description'].str.lower().str.contains('chip')]
+    newitems_df = newitems_df[~newitems_df['Description'].str.lower().str.contains('tote')]
+    newitems_df = newitems_df[~newitems_df['Description'].str.lower().str.contains('juice')]
+    newitems_df = newitems_df[~newitems_df['Description'].str.lower().str.contains('bulk')]
 
+    def text_sam_n_jenny(text):
+        resp = requests.post('https://textbelt.com/text', {
+            'phone': '4704138842', #Jenny
+            'message': text,
+            'key': '38b13e8b0b91647a96c032180781475ff4433c8aGGmUsrgjJ9Jpuo9AwOfEgJfA1',
+        })
+        resp = requests.post('https://textbelt.com/text', {
+            'phone': '6789383080', #Sam
+            'message': text,
+            'key': '38b13e8b0b91647a96c032180781475ff4433c8aGGmUsrgjJ9Jpuo9AwOfEgJfA1',
+        })
+        return resp
+    
     if len(newitems_df) > 0:
         # print("New items added to ACFB since last check:")
         # print(newitems_df)
-        item_str = "".join([f"{row['Description']} - {row['item_num']}\n" for i,row in newitems_df.iterrows()])
+        item_str = "".join([f"{row['Description']} - {row['Product Category']}\n" for i,row in newitems_df.iterrows()])
         item_str = item_str[:-1]
         message = f"New items available:\n{item_str}"
 
@@ -181,20 +198,12 @@ def handler(event=None, context=None):
                     else:
                         temp += "\n" + alist[i]
                 else:
-                    resp = requests.post('https://textbelt.com/text', {
-                        'phone': '6787589978',
-                        'message': temp,
-                        'key': '38b13e8b0b91647a96c032180781475ff4433c8aGGmUsrgjJ9Jpuo9AwOfEgJfA1',
-                    })
+                    resp = text_sam_n_jenny(temp)
                     temp = ""
                 i += 1
             message = temp
 
-        resp = requests.post('https://textbelt.com/text', {
-        'phone': '6787589978',
-        'message': message,
-        'key': '38b13e8b0b91647a96c032180781475ff4433c8aGGmUsrgjJ9Jpuo9AwOfEgJfA1',
-        })
+        resp = text_sam_n_jenny(message)
         print(resp.json())
     logger.info("Texts sent")
     ################################# Replacing all data in Postgres ###################################
